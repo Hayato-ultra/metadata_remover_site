@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scrub | Premium Metadata Cleaner</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#6366f1">
+    <style>
+        /* Previous styles... */
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #22d3ee;
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background: var(--bg);
+            background-image: 
+                radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
+                radial-gradient(at 50% 0%, hsla(225,39%,30%,1) 0, transparent 50%), 
+                radial-gradient(at 100% 0%, hsla(339,49%,30%,1) 0, transparent 50%);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        header {
+            padding: 2rem;
+            text-align: center;
+            width: 100%;
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(to right, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        .tagline {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .main-container {
+            width: 100%;
+            max-width: 1000px;
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @media (max-width: 800px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: transform 0.3s ease, border-color 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .card h2 {
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Upload Section */
+        .drop-zone {
+            width: 100%;
+            height: 250px;
+            border: 2px dashed var(--glass-border);
+            border-radius: 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            gap: 1rem;
+            text-align: center;
+        }
+
+        .drop-zone:hover, .drop-zone.drag-over {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .drop-zone i {
+            color: var(--primary);
+        }
+
+        /* Camera Section */
+        .camera-container {
+            width: 100%;
+            aspect-ratio: 4/3;
+            background: #000;
+            border-radius: 1rem;
+            overflow: hidden;
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .camera-controls {
+            display: flex;
+            gap: 1rem;
+        }
+
+        /* Buttons */
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        button:hover {
+            background: var(--primary-hover);
+            transform: scale(1.02);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        button.secondary {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        button.secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Processing Overlay */
+        .status-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(8px);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .loader {
+            width: 60px;
+            height: 60px;
+            border: 5px solid var(--glass-border);
+            border-top: 5px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1.5rem;
+        }
+
+        .scanning-bar {
+            width: 200px;
+            height: 4px;
+            background: var(--glass-border);
+            border-radius: 2px;
+            position: relative;
+            overflow: hidden;
+            margin-top: 1rem;
+        }
+
+        .scanning-bar::after {
+            content: '';
+            position: absolute;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to right, transparent, var(--accent), transparent);
+            animation: scan 1.5s infinite;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes scan { 0% { left: -100%; } 100% { left: 100%; } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Hidden inputs */
+        #file-input, #canvas { display: none; }
+
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: #10b981;
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            transform: translateY(200%);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 2000;
+        }
+
+        .toast.show { transform: translateY(0); }
+        .toast.error { background: #ef4444; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">SCRUB</div>
+        <div class="tagline">Deep Privacy for your Digital Memories</div>
+    </header>
+
+    <div class="main-container">
+        <!-- Capture Card -->
+        <div class="card">
+            <h2><i data-lucide="camera"></i> Live Capture</h2>
+            <div class="camera-container">
+                <video id="video" autoplay playsinline muted></video>
+                <div id="camera-placeholder" style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; background: #000; color: var(--text-muted);">
+                    <i data-lucide="video-off" style="width: 48px; height: 48px; margin-bottom: 1rem;"></i>
+                    <p>Camera not started</p>
+                </div>
+            </div>
+            <div class="camera-controls">
+                <button id="btn-start" onclick="startCamera()">
+                    <i data-lucide="power"></i> Start
+                </button>
+                <button id="btn-capture" onclick="capturePhoto()" style="display: none;">
+                    <i data-lucide="circle"></i> Capture & Scrub
+                </button>
+            </div>
+        </div>
+
+        <!-- Upload Card -->
+        <div class="card">
+            <h2><i data-lucide="upload-cloud"></i> Batch Upload</h2>
+            <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+                <i data-lucide="image" style="width: 48px; height: 48px;"></i>
+                <div>
+                    <p style="font-weight: 600;">Drop your photo here</p>
+                    <p style="font-size: 0.9rem; color: var(--text-muted);">or click to browse from device</p>
+                </div>
+                <div id="file-name" style="margin-top: 1rem; font-size: 0.8rem; color: var(--primary); display: none;"></div>
+            </div>
+            <input type="file" id="file-input" accept="image/*,application/pdf" onchange="handleFileSelect(event)">
+            <button id="btn-upload" style="margin-top: 1.5rem; width: 100%; justify-content: center;" onclick="uploadFile()" disabled>
+                <i data-lucide="sparkles"></i> Scrub Selected File
+            </button>
+        </div>
+    </div>
+
+    <!-- Processing Overlay -->
+    <div class="status-overlay" id="overlay">
+        <div class="loader"></div>
+        <h3 id="status-text">Scrubbing Metadata...</h3>
+        <p style="color: var(--text-muted); margin-top: 0.5rem;">Removing GPS, timestamps, and device info</p>
+        <div class="scanning-bar"></div>
+    </div>
+
+    <div class="toast" id="toast">Success! File cleaned.</div>
+    <canvas id="canvas"></canvas>
+
+    <script>
+        lucide.createIcons();
+        
+        let stream;
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const overlay = document.getElementById('overlay');
+        const btnStart = document.getElementById('btn-start');
+        const btnCapture = document.getElementById('btn-capture');
+        const btnUpload = document.getElementById('btn-upload');
+        const dropZone = document.getElementById('drop-zone');
+        const fileNameDisplay = document.getElementById('file-name');
+        let selectedFile = null;
+
+        // Camera Logic
+        async function startCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment' } 
+                });
+                video.srcObject = stream;
+                document.getElementById('camera-placeholder').style.display = 'none';
+                btnStart.style.display = 'none';
+                btnCapture.style.display = 'flex';
+                showToast("Camera Ready", false);
+            } catch (err) {
+                console.error(err);
+                showToast("Error accessing camera", true);
+            }
+        }
+
+        function capturePhoto() {
+            const context = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0);
+
+            canvas.toBlob(blob => {
+                const file = new File([blob], "capture.jpg", { type: "image/jpeg" });
+                processFile(file);
+            }, 'image/jpeg', 0.95);
+        }
+
+        // Upload Logic
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) setFile(file);
+        }
+
+        function setFile(file) {
+            selectedFile = file;
+            fileNameDisplay.textContent = file.name;
+            fileNameDisplay.style.display = 'block';
+            btnUpload.disabled = false;
+        }
+
+        function uploadFile() {
+            if (selectedFile) processFile(selectedFile);
+        }
+
+        // Processing Logic
+        async function processFile(file) {
+            overlay.style.display = 'flex';
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/process', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `scrubbed_${file.name.includes('.') ? file.name : file.name + '.jpg'}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    showToast("Metadata Removed Successfully!");
+                } else {
+                    const err = await response.json();
+                    showToast(err.error || "Processing failed", true);
+                }
+            } catch (err) {
+                showToast("Server error occurred", true);
+            } finally {
+                overlay.style.display = 'none';
+            }
+        }
+
+        // UI Helpers
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.className = 'toast' + (isError ? ' error' : '') + ' show';
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // Drag & Drop
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(name => {
+            dropZone.addEventListener(name, e => {
+                e.preventDefault();
+                e.stopPropagation();
+            }, false);
+        });
+
+        dropZone.addEventListener('dragover', () => dropZone.classList.add('drag-over'));
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+        dropZone.addEventListener('drop', e => {
+            dropZone.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file) setFile(file);
+        });
+
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then(reg => console.log('SW registered!', reg))
+                    .catch(err => console.log('SW registration failed:', err));
+            });
+        }
+    </script>
+</body>
+</html>
